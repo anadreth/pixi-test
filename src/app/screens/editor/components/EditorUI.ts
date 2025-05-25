@@ -2,6 +2,8 @@ export class EditorUI {
   private gridXInput!: HTMLInputElement;
   private gridYInput!: HTMLInputElement;
   private applyButton!: HTMLButtonElement;
+  private saveMapButton!: HTMLButtonElement;
+  private loadMapButton!: HTMLButtonElement;
   private container!: HTMLDivElement;
   private statusText!: HTMLDivElement;
   private selectionDebug!: HTMLDivElement;
@@ -14,6 +16,8 @@ export class EditorUI {
     this.gridXInput = document.createElement("input");
     this.gridYInput = document.createElement("input");
     this.applyButton = document.createElement("button");
+    this.saveMapButton = document.createElement("button");
+    this.loadMapButton = document.createElement("button");
     this.statusText = document.createElement("div");
     this.selectionDebug = document.createElement("div");
 
@@ -34,6 +38,29 @@ export class EditorUI {
     });
     
     this.applyButton.textContent = "Apply Grid Size";
+    this.saveMapButton.textContent = "Save Map";
+    this.loadMapButton.textContent = "Load Map";
+    
+    // Add some styling to the save/load buttons
+    Object.assign(this.saveMapButton.style, {
+      marginLeft: "10px",
+      backgroundColor: "#2a6",
+      border: "none",
+      padding: "4px 8px",
+      color: "white",
+      borderRadius: "3px",
+      cursor: "pointer"
+    });
+    
+    Object.assign(this.loadMapButton.style, {
+      marginLeft: "5px",
+      backgroundColor: "#26a",
+      border: "none",
+      padding: "4px 8px",
+      color: "white",
+      borderRadius: "3px",
+      cursor: "pointer"
+    });
     this.statusText.style.color = "#aaa";
     this.statusText.style.marginTop = "5px";
     this.statusText.style.fontSize = "12px";
@@ -55,6 +82,14 @@ export class EditorUI {
     this.container.appendChild(this.gridXInput);
     this.container.appendChild(this.gridYInput);
     this.container.appendChild(this.applyButton);
+    
+    // Create a container div for the map buttons to keep them separate
+    const mapButtonsContainer = document.createElement("div");
+    mapButtonsContainer.style.marginTop = "8px";
+    mapButtonsContainer.appendChild(this.saveMapButton);
+    mapButtonsContainer.appendChild(this.loadMapButton);
+    this.container.appendChild(mapButtonsContainer);
+    
     this.container.appendChild(this.statusText);
     this.container.appendChild(this.selectionDebug);
     document.body.appendChild(this.container);
@@ -64,6 +99,7 @@ export class EditorUI {
    * Set callback for when Apply button is clicked
    */
   public onApplyClick(callback: (cols: number, rows: number) => void): void {
+
     this.applyButton.onclick = () => {
       let cols = parseInt(this.gridXInput.value, 10);
       let rows = parseInt(this.gridYInput.value, 10);
@@ -132,6 +168,28 @@ export class EditorUI {
     }
   }
 
+  /**
+   * Set callback for when Save Map button is clicked
+   */
+  public onSaveMapClick(callback: () => void): void {
+    this.saveMapButton.onclick = callback;
+  }
+  
+  /**
+   * Set callback for when Load Map button is clicked
+   */
+  public onLoadMapClick(callback: () => void): void {
+    this.loadMapButton.onclick = callback;
+  }
+  
+  /**
+   * Update the grid size input values
+   */
+  public updateGridSizeInputs(cols: number, rows: number): void {
+    this.gridXInput.value = cols.toString();
+    this.gridYInput.value = rows.toString();
+  }
+  
   /**
    * Remove UI from DOM
    */
