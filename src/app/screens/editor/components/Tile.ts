@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { TilePosition } from '../models/GridModel';
+import { TileProperties, DEFAULT_PROPERTIES } from '../models/TileProperties';
 
 export enum TileState {
   DEFAULT,
@@ -12,9 +13,10 @@ export class Tile extends PIXI.Container {
   private _labelText: PIXI.Text | null = null;
   private _state: TileState = TileState.DEFAULT;
   
+  // Tile properties
+  private _properties: TileProperties = { ...DEFAULT_PROPERTIES };
+  
   // Colors and opacity
-  private readonly DEFAULT_EVEN_COLOR = 0x222222;
-  private readonly DEFAULT_ODD_COLOR = 0x333333;
   private readonly DEFAULT_ALPHA = 0.3;
   private readonly HOVER_COLOR = 0x3498db;
   private readonly HOVER_ALPHA = 0.6;
@@ -114,6 +116,33 @@ export class Tile extends PIXI.Container {
     let fillColor: number;
     let fillAlpha: number;
     
+    // Base color based on texture
+    let baseColor: number;
+    switch (this._properties.texture) {
+      case 'grass':
+        baseColor = 0x33AA33; // Green
+        break;
+      case 'stone':
+        baseColor = 0x888888; // Gray
+        break;
+      case 'sand':
+        baseColor = 0xF0E68C; // Sand yellow
+        break;
+      case 'water':
+        baseColor = 0x4444FF; // Blue
+        break;
+      case 'snow':
+        baseColor = 0xEEEEEE; // White
+        break;
+      default:
+        baseColor = 0x33AA33; // Default green
+    }
+    
+    // Adjust color based on elevation (brighter = higher)
+    const elevationFactor = Math.max(0, Math.min(0.5, this._properties.elevation * 0.05));
+    const adjustedColor = this.adjustColorForElevation(baseColor, elevationFactor);
+    
+    // Final color based on state
     switch (this._state) {
       case TileState.SELECTED:
         fillColor = this.SELECTION_COLOR;
@@ -124,9 +153,8 @@ export class Tile extends PIXI.Container {
         fillAlpha = this.HOVER_ALPHA;
         break;
       default:
-        const isEvenTile = (this.gridPos.x + this.gridPos.y) % 2 === 0;
-        fillColor = isEvenTile ? this.DEFAULT_EVEN_COLOR : this.DEFAULT_ODD_COLOR;
-        fillAlpha = this.DEFAULT_ALPHA;
+        fillColor = adjustedColor;
+        fillAlpha = this._properties.walkable ? this.DEFAULT_ALPHA : this.DEFAULT_ALPHA * 2;
     }
     
     this.graphics.beginFill(fillColor, fillAlpha);
@@ -145,5 +173,62 @@ export class Tile extends PIXI.Container {
   
   public isSelected(): boolean {
     return this._state === TileState.SELECTED;
+  }
+  
+  // Properties getters and setters
+  public get properties(): TileProperties {
+    return { ...this._properties };
+  }
+  
+  public set properties(newProps: Partial<TileProperties>) {
+    // Update only the properties that are provided
+    this._properties = { ...this._properties, ...newProps };
+    
+    // Redraw the tile to reflect property changes
+    this.draw();
+  }
+  
+  // Property-specific getters and setters
+  public get elevation(): number {
+    return this._properties.elevation;
+  }
+  
+  public set elevation(value: number) {
+    this._properties.elevation = value;
+    this.draw();
+  }
+  
+  public get texture(): string {
+    return this._properties.texture;
+  }
+  
+  public set texture(value: string) {
+    this._properties.texture = value;
+    this.draw();
+  }
+  
+  public get walkable(): boolean {
+    return this._properties.walkable;
+  }
+  
+  public set walkable(value: boolean) {
+    this._properties.walkable = value;
+    this.draw();
+  }
+  
+  // Helper method to adjust color based on elevation
+  private adjustColorForElevation(color: number, factor: number): number {
+    // Extract RGB components
+    const r = (color >> 16) & 0xFF;
+    const g = (color >> 8) & 0xFF;
+    const b = color & 0xFF;
+    
+    // Brighten based on elevation
+    const brightenR = Math.min(255, Math.floor(r + (255 - r) * factor));
+    const brightenG = Math.min(255, Math.floor(g + (255 - g) * factor));
+    const brightenB = Math.min(255, Math.floor(b + (255 - b) * factor));
+    
+    // Combine back to hex
+    return (brightenR << 16) | (brightenG << 8) | brightenB;
   }
 }

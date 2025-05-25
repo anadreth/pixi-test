@@ -10,7 +10,7 @@ export class Grid extends PIXI.Container {
   private currentHoveredTile: Tile | null = null;
   
   // Box selection properties
-  private isBoxSelecting: boolean = false;
+  private _isBoxSelecting: boolean = false;
   private boxSelectionStartPosition: PIXI.Point | null = null;
   private boxSelectionCurrentPosition: PIXI.Point | null = null;
 
@@ -66,7 +66,7 @@ export class Grid extends PIXI.Container {
     return `${x},${y}`;
   }
 
-  private getTile(x: number, y: number): Tile | undefined {
+  public getTile(x: number, y: number): Tile | undefined {
     return this.tiles.get(this.getTileKey(x, y));
   }
 
@@ -166,6 +166,11 @@ export class Grid extends PIXI.Container {
     this.clearSelectionBox();
   }
   
+  // Public getter to check if box selection is in progress
+  public get isBoxSelecting(): boolean {
+    return this._isBoxSelecting;
+  }
+  
   // Box selection methods
   private setupBoxSelectionEvents(): void {
     // Use mouse events instead of pointer events as per user preference
@@ -190,7 +195,7 @@ export class Grid extends PIXI.Container {
     const localPos = this.toLocal(event.global);
     
     // Start box selection
-    this.isBoxSelecting = true;
+    this._isBoxSelecting = true;
     this.boxSelectionStartPosition = new PIXI.Point(localPos.x, localPos.y);
     
     // Convert screen position to grid position
@@ -198,10 +203,16 @@ export class Grid extends PIXI.Container {
     const gridX = Math.floor(localPos.x / tileSize);
     const gridY = Math.floor(localPos.y / tileSize);
     
-    // No need to store starting grid position as we use the selection model
+    // Only proceed if we clicked on a valid tile
+    if (gridX < 0 || gridY < 0 || gridX >= this.model.size.cols || gridY >= this.model.size.rows) {
+      return;
+    }
     
-    // Start box selection in the model
+    // Start the box selection in the model
     this.selectionModel.startBoxSelection(gridX, gridY);
+    
+    // Update selected tiles
+    this.updateAllTileStates();
     
     // Initially, box selection current position is the same as start
     this.boxSelectionCurrentPosition = new PIXI.Point(localPos.x, localPos.y);
@@ -242,24 +253,28 @@ export class Grid extends PIXI.Container {
     // Complete the box selection in the model
     this.selectionModel.completeBoxSelection(gridX, gridY, event.shiftKey);
     
-    // Reset box selection state
-    this.isBoxSelecting = false;
-    this.boxSelectionStartPosition = null;
-    this.boxSelectionCurrentPosition = null;
-    
     // Clear the selection box visual
     this.clearSelectionBox();
     
     // Update the states of all tiles
     this.updateAllTileStates();
     
-    // Emit event for external listeners
+    // Important: First set _isBoxSelecting to false AFTER updating tiles
+    // and BEFORE emitting the event
+    this._isBoxSelecting = false;
+    
+    // Reset box selection state
+    this.boxSelectionStartPosition = null;
+    this.boxSelectionCurrentPosition = null;
+    
+    // Only emit the selection-changed event after we've set isBoxSelecting to false
+    // This ensures the popup won't show while dragging
     this.emit('selection-changed', this.selectionModel.getSelectedTiles());
   }
   
   private updateSelectionBox(): void {
     // If box selection isn't active or we don't have valid positions, do nothing
-    if (!this.isBoxSelecting || !this.boxSelectionStartPosition || !this.boxSelectionCurrentPosition) {
+    if (!this._isBoxSelecting || !this.boxSelectionStartPosition || !this.boxSelectionCurrentPosition) {
       return;
     }
     
