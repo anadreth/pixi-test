@@ -62,7 +62,7 @@ export class EditorScreen extends Container {
 
     // Set up interactions component
     this.interactions = new EditorInteractions(this, this.editorContainer, {
-      minZoom: 0.3,
+      minZoom: 0.01,
       maxZoom: 4,
       initialZoom: 1
     });
