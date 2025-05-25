@@ -1,0 +1,184 @@
+import { Container, Graphics, Point } from "pixi.js";
+
+type GridSize = {
+  cols: number;
+  rows: number;
+};
+
+const DEFAULT_TILE_SIZE = 64;
+
+export class EditorScreen extends Container {
+  public static assetBundles = ["game"];
+
+  public editorContainer: Container;
+  private gridOverlay: Graphics;
+  private gridSize: GridSize = { cols: 10, rows: 10 };
+  private tileSize: number = DEFAULT_TILE_SIZE;
+
+  private dragging = false;
+  private dragStart = new Point();
+  private editorOffset = new Point();
+
+  private zoomLevel = 1;
+  private minZoom = 1;
+  private maxZoom = 4;
+
+  constructor() {
+    super();
+
+    this.editorContainer = new Container();
+    this.gridOverlay = new Graphics();
+    this.editorContainer.addChild(this.gridOverlay);
+    this.addChild(this.editorContainer);
+
+    this.interactive = true;
+    this.setupZoomAndPan();
+    this.drawGrid();
+    this.createDebugUI();
+  }
+
+  /** Draw the debug tile grid */
+  private drawGrid() {
+    const g = this.gridOverlay;
+    g.clear();
+    g.beginPath();
+    g.stroke({
+      color: "#fff",
+      alpha: 0.5,
+      width: 1 / this.zoomLevel, // dynamic width
+    });
+
+    // Vertical lines
+    for (let x = 0; x <= this.gridSize.cols; x++) {
+      const px = x * this.tileSize;
+      g.moveTo(px, 0);
+      g.lineTo(px, this.gridSize.rows * this.tileSize);
+    }
+
+    // Horizontal lines
+    for (let y = 0; y <= this.gridSize.rows; y++) {
+      const py = y * this.tileSize;
+      g.moveTo(0, py);
+      g.lineTo(this.gridSize.cols * this.tileSize, py);
+    }
+
+    g.stroke(); // Apply the stroke
+  }
+
+  /** Create basic HTML inputs for grid size */
+  private createDebugUI() {
+    const gridXInput = document.createElement("input");
+    const gridYInput = document.createElement("input");
+    const button = document.createElement("button");
+
+    Object.assign(gridXInput, {
+      placeholder: "Cols",
+      type: "number",
+      value: "10",
+    });
+    Object.assign(gridYInput, {
+      placeholder: "Rows",
+      type: "number",
+      value: "10",
+    });
+    button.textContent = "Apply Grid Size";
+
+    const container = document.createElement("div");
+    Object.assign(container.style, {
+      position: "absolute",
+      top: "10px",
+      left: "10px",
+      zIndex: "9999",
+      background: "#222",
+      padding: "8px",
+      color: "#fff",
+      fontFamily: "monospace",
+      borderRadius: "4px",
+    });
+
+    container.appendChild(gridXInput);
+    container.appendChild(gridYInput);
+    container.appendChild(button);
+    document.body.appendChild(container);
+
+    button.onclick = () => {
+      const cols = parseInt(gridXInput.value, 10);
+      const rows = parseInt(gridYInput.value, 10);
+      if (!isNaN(cols) && !isNaN(rows)) {
+        this.gridSize = { cols, rows };
+        this.drawGrid();
+      }
+    };
+  }
+
+  /** Setup zoom and pan interactions */
+  private setupZoomAndPan() {
+    // Mouse wheel zoom
+    window.addEventListener("wheel", (e) => {
+      const zoomAmount = e.deltaY > 0 ? -0.1 : 0.1;
+      this.zoomLevel = Math.min(
+        this.maxZoom,
+        Math.max(this.minZoom, this.zoomLevel + zoomAmount),
+      );
+      this.editorContainer.scale.set(this.zoomLevel);
+    });
+
+    // Drag to pan
+    this.on("pointerdown", (e) => {
+      this.dragging = true;
+      this.dragStart.copyFrom(e.data.global);
+    });
+
+    this.on("pointerup", () => (this.dragging = false));
+    this.on("pointerupoutside", () => (this.dragging = false));
+
+    this.on("pointermove", (e) => {
+      if (!this.dragging) return;
+      
+      // Get current pointer position
+      const current = e.data.global;
+      
+      // Calculate the distance moved
+      const dx = current.x - this.dragStart.x;
+      const dy = current.y - this.dragStart.y;
+      
+      // Update the editor position
+      this.editorOffset.x += dx;
+      this.editorOffset.y += dy;
+      
+      // Apply the new position
+      this.editorContainer.position.set(
+        this.editorOffset.x,
+        this.editorOffset.y
+      );
+      
+      // Update the drag start position for the next move event
+      this.dragStart.copyFrom(current);
+    });
+  }
+
+  public resize() {}
+  public prepare() {}
+  public update() {}
+  public async pause() {}
+  public async resume() {}
+  public reset() {}
+  public async show(): Promise<void> {
+    // Center the grid in the screen
+    const appWidth = window.innerWidth;
+    const appHeight = window.innerHeight;
+    
+    // Calculate the center position
+    const gridWidth = this.gridSize.cols * this.tileSize;
+    const gridHeight = this.gridSize.rows * this.tileSize;
+    
+    // Set initial position to center the grid
+    this.editorOffset.x = (appWidth / 2) - (gridWidth / 2);
+    this.editorOffset.y = (appHeight / 2) - (gridHeight / 2);
+    
+    // Apply the position
+    this.editorContainer.position.set(this.editorOffset.x, this.editorOffset.y);
+  }
+  public async hide() {}
+  public blur() {}
+}
