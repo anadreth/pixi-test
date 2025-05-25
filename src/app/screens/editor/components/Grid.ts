@@ -6,8 +6,13 @@ import { Tile } from './Tile';
 export class Grid extends PIXI.Container {
   private tiles: Map<string, Tile> = new Map();
   private selectionBox: PIXI.Graphics;
-
+  
   private currentHoveredTile: Tile | null = null;
+  
+  // Box selection properties
+  private isBoxSelecting: boolean = false;
+  private boxSelectionStartPosition: PIXI.Point | null = null;
+  private boxSelectionCurrentPosition: PIXI.Point | null = null;
 
   constructor(
     private readonly model: GridModel,
@@ -17,6 +22,7 @@ export class Grid extends PIXI.Container {
 
     // Create grid components
     this.selectionBox = new PIXI.Graphics();
+    this.selectionBox.zIndex = 1; // Ensure selection box is drawn above tiles
 
     this.addChild(this.selectionBox);
 
@@ -25,6 +31,9 @@ export class Grid extends PIXI.Container {
 
     // Set up keyboard events
     this.setupKeyboardEvents();
+    
+    // Set up mouse events for box selection
+    this.setupBoxSelectionEvents();
   }
 
   private createTiles(): void {
@@ -86,6 +95,9 @@ export class Grid extends PIXI.Container {
 
     // Handle tile selection
     tile.on('tile-select', (data: { tile: Tile, shiftKey: boolean, ctrlKey: boolean }) => {
+      // If we're box selecting, don't process individual tile selections
+      if (this.isBoxSelecting) return;
+      
       const { tile, shiftKey, ctrlKey } = data;
       const { x, y } = tile.gridPosition;
 
@@ -151,5 +163,123 @@ export class Grid extends PIXI.Container {
   public clearSelection(): void {
     this.selectionModel.clearSelection();
     this.updateAllTileStates();
+    this.clearSelectionBox();
+  }
+  
+  // Box selection methods
+  private setupBoxSelectionEvents(): void {
+    // Use mouse events instead of pointer events as per user preference
+    this.eventMode = 'static';
+    
+    // Start box selection on mouse down
+    this.on('mousedown', this.onMouseDown.bind(this));
+    
+    // Update box selection on mouse move
+    this.on('mousemove', this.onMouseMove.bind(this));
+    
+    // Complete box selection on mouse up
+    this.on('mouseup', this.onMouseUp.bind(this));
+    this.on('mouseupoutside', this.onMouseUp.bind(this));
+  }
+  
+  private onMouseDown(event: PIXI.FederatedMouseEvent): void {
+    // Only respond to left mouse button (button 0)
+    if (event.button !== 0) return;
+    
+    // Get the mouse position in local coordinates
+    const localPos = this.toLocal(event.global);
+    
+    // Start box selection
+    this.isBoxSelecting = true;
+    this.boxSelectionStartPosition = new PIXI.Point(localPos.x, localPos.y);
+    
+    // Convert screen position to grid position
+    const tileSize = this.model.tileSize;
+    const gridX = Math.floor(localPos.x / tileSize);
+    const gridY = Math.floor(localPos.y / tileSize);
+    
+    // No need to store starting grid position as we use the selection model
+    
+    // Start box selection in the model
+    this.selectionModel.startBoxSelection(gridX, gridY);
+    
+    // Initially, box selection current position is the same as start
+    this.boxSelectionCurrentPosition = new PIXI.Point(localPos.x, localPos.y);
+    
+    // Draw initial selection box (it will be a single point)
+    this.updateSelectionBox();
+  }
+  
+  private onMouseMove(event: PIXI.FederatedMouseEvent): void {
+    // If not currently box selecting, do nothing
+    if (!this.isBoxSelecting) return;
+    
+    // Get the mouse position in local coordinates
+    const localPos = this.toLocal(event.global);
+    
+    // Update current position
+    this.boxSelectionCurrentPosition = new PIXI.Point(localPos.x, localPos.y);
+    
+    // Update the selection box visuals
+    this.updateSelectionBox();
+  }
+  
+  private onMouseUp(event: PIXI.FederatedMouseEvent): void {
+    // If not currently box selecting, do nothing
+    if (!this.isBoxSelecting) return;
+    
+    // Get the mouse position in local coordinates
+    const localPos = this.toLocal(event.global);
+    
+    // Update current position one last time
+    this.boxSelectionCurrentPosition = new PIXI.Point(localPos.x, localPos.y);
+    
+    // Convert screen position to grid position
+    const tileSize = this.model.tileSize;
+    const gridX = Math.floor(localPos.x / tileSize);
+    const gridY = Math.floor(localPos.y / tileSize);
+    
+    // Complete the box selection in the model
+    this.selectionModel.completeBoxSelection(gridX, gridY, event.shiftKey);
+    
+    // Reset box selection state
+    this.isBoxSelecting = false;
+    this.boxSelectionStartPosition = null;
+    this.boxSelectionCurrentPosition = null;
+    
+    // Clear the selection box visual
+    this.clearSelectionBox();
+    
+    // Update the states of all tiles
+    this.updateAllTileStates();
+    
+    // Emit event for external listeners
+    this.emit('selection-changed', this.selectionModel.getSelectedTiles());
+  }
+  
+  private updateSelectionBox(): void {
+    // If box selection isn't active or we don't have valid positions, do nothing
+    if (!this.isBoxSelecting || !this.boxSelectionStartPosition || !this.boxSelectionCurrentPosition) {
+      return;
+    }
+    
+    // Clear the old selection box
+    this.selectionBox.clear();
+    
+    // Calculate the rectangle coordinates
+    const startX = Math.min(this.boxSelectionStartPosition.x, this.boxSelectionCurrentPosition.x);
+    const startY = Math.min(this.boxSelectionStartPosition.y, this.boxSelectionCurrentPosition.y);
+    const width = Math.abs(this.boxSelectionCurrentPosition.x - this.boxSelectionStartPosition.x);
+    const height = Math.abs(this.boxSelectionCurrentPosition.y - this.boxSelectionStartPosition.y);
+    
+    // Draw selection box
+    this.selectionBox.lineStyle(2, 0x3498db, 1);
+    this.selectionBox.beginFill(0x3498db, 0.2);
+    this.selectionBox.drawRect(startX, startY, width, height);
+    this.selectionBox.endFill();
+  }
+  
+  private clearSelectionBox(): void {
+    this.selectionBox.clear();
   }
 }
