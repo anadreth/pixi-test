@@ -3,6 +3,11 @@ export type GridSize = {
   rows: number;
 };
 
+export interface TilePosition {
+  x: number;
+  y: number;
+}
+
 export const DEFAULT_TILE_SIZE = 64;
 
 export class GridModel {

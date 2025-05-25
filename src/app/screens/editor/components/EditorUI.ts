@@ -4,6 +4,7 @@ export class EditorUI {
   private applyButton!: HTMLButtonElement;
   private container!: HTMLDivElement;
   private statusText!: HTMLDivElement;
+  private selectionDebug!: HTMLDivElement;
   
   constructor() {
     this.createUI();
@@ -14,6 +15,7 @@ export class EditorUI {
     this.gridYInput = document.createElement("input");
     this.applyButton = document.createElement("button");
     this.statusText = document.createElement("div");
+    this.selectionDebug = document.createElement("div");
 
     Object.assign(this.gridXInput, {
       placeholder: "Cols",
@@ -54,6 +56,7 @@ export class EditorUI {
     this.container.appendChild(this.gridYInput);
     this.container.appendChild(this.applyButton);
     this.container.appendChild(this.statusText);
+    this.container.appendChild(this.selectionDebug);
     document.body.appendChild(this.container);
   }
   
@@ -80,6 +83,55 @@ export class EditorUI {
     };
   }
   
+  /**
+   * Update the selection display with comprehensive information
+   * about selected tiles and selection operations
+   */
+  public updateSelectionDisplay(x: number | null, y: number | null, selectedTilesCount?: number): void {
+    // Style the selection display if not already styled
+    if (!this.selectionDebug.style.backgroundColor) {
+      Object.assign(this.selectionDebug.style, {
+        marginTop: "10px",
+        padding: "5px",
+        backgroundColor: "#333",
+        borderRadius: "3px",
+        color: "#0f0",  // Green text for visibility
+        maxHeight: "150px",
+        overflowY: "auto",
+        fontSize: "12px",
+        fontFamily: "monospace",
+        whiteSpace: "pre-wrap"
+      });
+    }
+    
+    const selectionGuide = 
+      "Selection Controls:\n" +
+      "• Click: Select single tile\n" +
+      "• Shift+Click: Add to selection\n" +
+      "• Ctrl+Click: Toggle selection\n" +
+      "• Click+Drag: Box select\n" +
+      "• ESC: Clear selection";
+    
+    // Display information about selections
+    if (selectedTilesCount === 0 || (x === null && y === null && selectedTilesCount === undefined)) {
+      this.selectionDebug.textContent = "No tiles selected\n\n" + selectionGuide;
+    } else if (selectedTilesCount !== undefined && selectedTilesCount > 0) {
+      // If we have a clicked tile, show it as the last interaction
+      let message = `${selectedTilesCount} tile${selectedTilesCount !== 1 ? 's' : ''} selected`;
+      
+      if (x !== null && y !== null) {
+        message += `\nLast action: (${x}, ${y})`;
+      }
+      
+      message += "\n\n" + selectionGuide;
+      
+      this.selectionDebug.textContent = message;
+    } else if (x !== null && y !== null) {
+      // Fall back to just showing the clicked tile
+      this.selectionDebug.textContent = `Tile: (${x}, ${y})\n\n${selectionGuide}`;
+    }
+  }
+
   /**
    * Remove UI from DOM
    */
