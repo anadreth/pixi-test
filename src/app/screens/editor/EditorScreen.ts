@@ -1,4 +1,4 @@
-import { Container, Graphics, Point } from "pixi.js";
+import { Container, Graphics, Point, Rectangle } from "pixi.js";
 
 type GridSize = {
   cols: number;
@@ -15,8 +15,9 @@ export class EditorScreen extends Container {
   private gridSize: GridSize = { cols: 10, rows: 10 };
   private tileSize: number = DEFAULT_TILE_SIZE;
 
-  private dragging = false;
-  private dragStart = new Point();
+  // Drag state tracking
+  private isDragging = false;
+  private lastPosition = new Point();
   private editorOffset = new Point();
 
   private zoomLevel = 1;
@@ -30,11 +31,15 @@ export class EditorScreen extends Container {
     this.gridOverlay = new Graphics();
     this.editorContainer.addChild(this.gridOverlay);
     this.addChild(this.editorContainer);
-
-    this.interactive = true;
-    this.setupZoomAndPan();
+    
+    // Set up interaction properties
+    this.eventMode = 'static';
+    this.hitArea = new Rectangle(0, 0, window.innerWidth, window.innerHeight);
+    
+    // Draw grid and set up UI
     this.drawGrid();
     this.createDebugUI();
+    this.setupZoomAndPan();
   }
 
   /** Draw the debug tile grid */
@@ -113,48 +118,49 @@ export class EditorScreen extends Container {
 
   /** Setup zoom and pan interactions */
   private setupZoomAndPan() {
-    // Mouse wheel zoom
+    // Simple zoom with mouse wheel
     window.addEventListener("wheel", (e) => {
       const zoomAmount = e.deltaY > 0 ? -0.1 : 0.1;
       this.zoomLevel = Math.min(
         this.maxZoom,
-        Math.max(this.minZoom, this.zoomLevel + zoomAmount),
+        Math.max(this.minZoom, this.zoomLevel + zoomAmount)
       );
       this.editorContainer.scale.set(this.zoomLevel);
+      this.drawGrid();
     });
-
-    // Drag to pan
-    this.on("pointerdown", (e) => {
-      this.dragging = true;
-      this.dragStart.copyFrom(e.data.global);
-    });
-
-    this.on("pointerup", () => (this.dragging = false));
-    this.on("pointerupoutside", () => (this.dragging = false));
-
-    this.on("pointermove", (e) => {
-      if (!this.dragging) return;
-      
-      // Get current pointer position
-      const current = e.data.global;
-      
-      // Calculate the distance moved
-      const dx = current.x - this.dragStart.x;
-      const dy = current.y - this.dragStart.y;
-      
-      // Update the editor position
-      this.editorOffset.x += dx;
-      this.editorOffset.y += dy;
-      
-      // Apply the new position
-      this.editorContainer.position.set(
-        this.editorOffset.x,
-        this.editorOffset.y
-      );
-      
-      // Update the drag start position for the next move event
-      this.dragStart.copyFrom(current);
-    });
+    
+    // Manual implementation of drag and drop using direct DOM events
+    document.addEventListener('mousedown', this.onDragStart.bind(this));
+    document.addEventListener('mousemove', this.onDragMove.bind(this));
+    document.addEventListener('mouseup', this.onDragEnd.bind(this));
+  }
+  
+  private onDragStart(e: MouseEvent) {
+    this.isDragging = true;
+    this.lastPosition.set(e.clientX, e.clientY);
+  }
+  
+  private onDragMove(e: MouseEvent) {
+    if (!this.isDragging) return;
+    
+    // Calculate the distance moved since last position
+    const dx = e.clientX - this.lastPosition.x;
+    const dy = e.clientY - this.lastPosition.y;
+    
+    // Update editor container position
+    this.editorContainer.position.x += dx;
+    this.editorContainer.position.y += dy;
+    
+    // Store the updated position for other calculations
+    this.editorOffset.x = this.editorContainer.position.x;
+    this.editorOffset.y = this.editorContainer.position.y;
+    
+    // Update the last position for next move
+    this.lastPosition.set(e.clientX, e.clientY);
+  }
+  
+  private onDragEnd() {
+    this.isDragging = false;
   }
 
   public resize() {}
