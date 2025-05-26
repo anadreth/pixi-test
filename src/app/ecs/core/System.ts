@@ -1,4 +1,4 @@
-import { World } from './World';
+import { World } from "./World.ts";
 
 /**
  * Base System class that all systems will extend
