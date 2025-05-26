@@ -1,5 +1,6 @@
 import { System } from '../core/System';
 import { World } from '../core/World';
+import { HealthComponent } from '../components/HealthComponent';
 import { AnimationComponent } from '../components/AnimationComponent';
 import { SpriteComponent } from '../components/SpriteComponent';
 import { VelocityComponent } from '../components/VelocityComponent';
@@ -22,6 +23,10 @@ export class AnimationSystem extends System {
     );
     
     for (const entityId of animatableEntities) {
+      // Skip dead entities
+      const health = this.world.getComponent<HealthComponent>(entityId, HealthComponent.TYPE);
+      if (health && health.isDead()) continue;
+      
       const animation = this.world.getComponent<AnimationComponent>(entityId, AnimationComponent.TYPE)!;
       const spriteComp = this.world.getComponent<SpriteComponent>(entityId, SpriteComponent.TYPE)!;
       const velocity = this.world.getComponent<VelocityComponent>(entityId, VelocityComponent.TYPE);

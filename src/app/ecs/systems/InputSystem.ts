@@ -1,5 +1,6 @@
 import { System } from '../core/System';
 import { World } from '../core/World';
+import { HealthComponent } from '../components/HealthComponent';
 import { InputComponent } from '../components/InputComponent';
 import { AttackComponent } from '../components/AttackComponent';
 
@@ -24,11 +25,14 @@ export class InputSystem extends System {
     this.inputEntities = this.world.getEntitiesWithComponents(InputComponent.TYPE);
     
     // Process attack key presses (spacebar)
-    for (const entityId of this.inputEntities) {
-      const inputComponent = this.world.getComponent<InputComponent>(entityId, InputComponent.TYPE);
+    for (let i = 0; i < this.inputEntities.length; i++) {
+      // Skip dead entities
+      const health = this.world.getComponent<HealthComponent>(this.inputEntities[i], HealthComponent.TYPE);
+      if (health && health.isDead()) continue;
+      const inputComponent = this.world.getComponent<InputComponent>(this.inputEntities[i], InputComponent.TYPE);
       
       if (inputComponent?.keyState[' ']) {
-        const attackComponent = this.world.getComponent<AttackComponent>(entityId, AttackComponent.TYPE);
+        const attackComponent = this.world.getComponent<AttackComponent>(this.inputEntities[i], AttackComponent.TYPE);
         
         if (attackComponent && !attackComponent.isAttacking) {
           // Start attack

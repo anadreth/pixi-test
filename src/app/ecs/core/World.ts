@@ -79,6 +79,19 @@ export class World {
     // Get the component for this entity
     return componentMap.get(entityId) as T | undefined;
   }
+  
+  /**
+   * Remove an entity immediately (not queued for end of update)
+   */
+  public removeEntity(entityId: number): void {
+    // Remove all components for this entity
+    for (const componentMap of this.components.values()) {
+      componentMap.delete(entityId);
+    }
+    
+    // Remove the entity
+    this.entities.delete(entityId);
+  }
 
   /**
    * Remove a component from an entity

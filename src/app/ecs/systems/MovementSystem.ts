@@ -1,5 +1,6 @@
 import { System } from '../core/System';
 import { World } from '../core/World';
+import { HealthComponent } from '../components/HealthComponent';
 import { TransformComponent } from '../components/TransformComponent';
 import { VelocityComponent } from '../components/VelocityComponent';
 import { InputComponent } from '../components/InputComponent';
@@ -23,6 +24,10 @@ export class MovementSystem extends System {
     );
     
     for (const entityId of movableEntities) {
+      // Skip dead entities
+      const health = this.world.getComponent<HealthComponent>(entityId, HealthComponent.TYPE);
+      if (health && health.isDead()) continue;
+      
       const transform = this.world.getComponent<TransformComponent>(entityId, TransformComponent.TYPE)!;
       const velocity = this.world.getComponent<VelocityComponent>(entityId, VelocityComponent.TYPE)!;
       const input = this.world.getComponent<InputComponent>(entityId, InputComponent.TYPE)!;
