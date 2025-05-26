@@ -5,6 +5,7 @@ import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
 import { AnimationSystem } from "./systems/AnimationSystem";
 import { AttackSystem } from "./systems/AttackSystem";
+import { HealthSystem } from "./systems/HealthSystem";
 import { EntityFactory } from "./entities/EntityFactory";
 import { SpriteComponent } from "./components/SpriteComponent";
 import { engine } from '../getEngine';
@@ -26,6 +27,7 @@ export class Game {
     this.world.addSystem(new MovementSystem(this.world));
     this.world.addSystem(new AttackSystem(this.world));
     this.world.addSystem(new AnimationSystem(this.world));
+    this.world.addSystem(new HealthSystem(this.world));
     this.world.addSystem(new RenderSystem(this.world));
     
     // Set up Ticker
@@ -43,6 +45,15 @@ export class Game {
     const spriteComponent = this.world.getComponent<SpriteComponent>(goblin.id, SpriteComponent.TYPE);
     if (spriteComponent) {
       this.container.addChild(spriteComponent.container);
+    }
+
+    // Create the castle
+    const castle = await EntityFactory.createCastle(this.world);
+    
+    // Add the castle's sprite container to the game container
+    const castleSprite = this.world.getComponent<SpriteComponent>(castle.id, SpriteComponent.TYPE);
+    if (castleSprite) {
+      this.container.addChild(castleSprite.container);
     }
   }
   
