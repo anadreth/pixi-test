@@ -1,5 +1,4 @@
 import { setEngine } from "./app/getEngine";
-import { EditorScreen } from "./app/screens/editor/EditorScreen";
 import { LoadScreen } from "./app/screens/LoadScreen";
 import { MainScreen } from "./app/screens/main/MainScreen";
 import { userSettings } from "./app/utils/userSettings";
@@ -26,5 +25,5 @@ setEngine(engine);
   userSettings.init();
 
   await engine.navigation.showScreen(LoadScreen);
-  await engine.navigation.showScreen(EditorScreen);
+  await engine.navigation.showScreen(MainScreen);
 })();
