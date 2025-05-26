@@ -36,6 +36,8 @@ export class MainScreen extends Container {
   private attackDirection: 'left' | 'right' | 'up' | 'down' = 'right';
   private attackFrameIndex: number = 0;
   private facingDirection: 'left' | 'right' = 'right';
+  private attackHitbox?: Graphics;
+  private readonly ATTACK_HITBOX_SIZE = 64; // Size of the attack hitbox
 
   constructor() {
     super();
@@ -368,6 +370,9 @@ export class MainScreen extends Container {
           if (this.attackFrameIndex === attackFrameCount - 1) {
             this.isAttacking = false;
             this.attackFrameIndex = 0;
+
+            // Remove attack hitbox when attack animation completes
+            this.removeAttackHitbox();
           }
         } else {
           // Normal movement/idle animations
@@ -402,6 +407,9 @@ export class MainScreen extends Container {
     this.attackFrameIndex = 0; // Reset attack animation frame
 
     // Attack direction was already set in moveGoblin based on WASD keys
+
+    // Spawn the attack hitbox based on current attack direction
+    this.spawnAttackHitbox();
   }
 
   /** Show screen with animations */
@@ -427,4 +435,52 @@ export class MainScreen extends Container {
 
   /** Auto pause the app when window go out of focus */
   public blur() { }
+
+  /**
+   * Spawn an attack hitbox based on the current attack direction
+   */
+  private spawnAttackHitbox(): void {
+    // Remove any existing hitbox first
+    this.removeAttackHitbox();
+
+    if (!this.goblinCharacter) return;
+
+    // Create a new hitbox
+    this.attackHitbox = new Graphics();
+    this.attackHitbox.rect(0, 0, this.ATTACK_HITBOX_SIZE, this.ATTACK_HITBOX_SIZE).fill({ color: 0xff0000, alpha: 0.3 });
+
+    // Position the hitbox based on attack direction
+    const halfSize = this.ATTACK_HITBOX_SIZE / 2;
+    const offsetDistance = 50; // Distance from goblin center to hitbox center
+    const upDistanceAdjustment = 15;
+    // Position the hitbox relative to the goblin based on direction
+    switch (this.attackDirection) {
+      case 'up':
+        this.attackHitbox.position.set(-halfSize, -halfSize - offsetDistance + upDistanceAdjustment);
+        break;
+      case 'down':
+        this.attackHitbox.position.set(-halfSize, -halfSize + offsetDistance);
+        break;
+      case 'left':
+        this.attackHitbox.position.set(-halfSize - offsetDistance, -halfSize);
+        break;
+      case 'right':
+        this.attackHitbox.position.set(-halfSize + offsetDistance, -halfSize);
+        break;
+    }
+
+    // Add the hitbox to the goblin container
+    this.goblinCharacter.addChild(this.attackHitbox);
+  }
+
+  /**
+   * Remove the attack hitbox when attack completes
+   */
+  private removeAttackHitbox(): void {
+    if (this.attackHitbox && this.goblinCharacter) {
+      this.goblinCharacter.removeChild(this.attackHitbox);
+      this.attackHitbox.destroy();
+      this.attackHitbox = undefined;
+    }
+  }
 }
